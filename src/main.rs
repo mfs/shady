@@ -48,11 +48,11 @@ fn main() {
 
     implement_vertex!(Vertex, position);
 
-    let vertex1 = Vertex { position: [-0.9,  0.9] }; // NW
-    let vertex2 = Vertex { position: [-0.9, -0.9] }; // SW
+    let vertex1 = Vertex { position: [-1.0,  1.0] }; // NW
+    let vertex2 = Vertex { position: [-1.0, -1.0] }; // SW
 
-    let vertex3 = Vertex { position: [ 0.9,  0.9] }; // NE
-    let vertex4 = Vertex { position: [ 0.9, -0.9] }; // SE
+    let vertex3 = Vertex { position: [ 1.0,  1.0] }; // NE
+    let vertex4 = Vertex { position: [ 1.0, -1.0] }; // SE
 
     let shape = vec![vertex1, vertex2, vertex3, vertex4];
 
@@ -63,7 +63,7 @@ fn main() {
 
     loop {
         let mut target = display.draw();
-        target.clear_color(0.0, 0.0, 1.0, 1.0);
+        target.clear_color(0.0, 0.0, 0.0, 1.0);
         target.draw(&vertex_buffer, &indices, &program, &glium::uniforms::EmptyUniforms,
                     &Default::default()).unwrap();
         target.finish().unwrap();
