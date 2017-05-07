@@ -72,7 +72,7 @@ fn main() {
         let (width, height) = target.get_dimensions();
 
         let uniforms = uniform! {
-            dimensions: [width, height], // uvec2
+            iResolution: [width, height], // uvec2
         };
 
         target.clear_color(0.0, 0.0, 0.0, 1.0);
