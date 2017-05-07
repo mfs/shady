@@ -22,7 +22,8 @@ fn load_shader(filename: &str) -> String {
     shader
 }
 
-fn compile_shaders(display: &Facade) -> Result<glium::Program, glium::ProgramCreationError>  {
+fn compile_shaders(display: &Facade, filename: &str) ->
+    Result<glium::Program, glium::ProgramCreationError>  {
 
     let vertex_shader_src = r#"
         #version 140
@@ -34,7 +35,7 @@ fn compile_shaders(display: &Facade) -> Result<glium::Program, glium::ProgramCre
         }
     "#;
 
-    let fragment_shader_src = load_shader("shaders/dumb.frag");
+    let fragment_shader_src = load_shader(filename);
 
     let program = glium::Program::from_source(display, vertex_shader_src,
                                               &fragment_shader_src, None);
@@ -42,6 +43,15 @@ fn compile_shaders(display: &Facade) -> Result<glium::Program, glium::ProgramCre
 }
 
 fn main() {
+    let args: Vec<String> = std::env::args().collect();
+
+    if args.len() != 2 {
+        println!("usage: shady <SHADER>");
+        std::process::exit(1);
+    }
+
+    let ref fragment_shader = args[1];
+
     use glium::{DisplayBuild, Surface};
     let display = glium::glutin::WindowBuilder::new().build_glium().unwrap();
 
@@ -63,7 +73,7 @@ fn main() {
     let vertex_buffer = glium::VertexBuffer::new(&display, &shape).unwrap();
     let indices = glium::index::NoIndices(glium::index::PrimitiveType::TriangleStrip);
 
-    let mut program = compile_shaders(&display).unwrap();
+    let mut program = compile_shaders(&display, fragment_shader).unwrap();
 
     loop {
         let mut target = display.draw();
@@ -83,7 +93,7 @@ fn main() {
                 Event::Closed => return,
                 Event::KeyboardInput(ElementState::Pressed, _, Some(VirtualKeyCode::Q)) => return,
                 Event::KeyboardInput(ElementState::Pressed, _, Some(VirtualKeyCode::F5)) => {
-                    match compile_shaders(&display) {
+                    match compile_shaders(&display, fragment_shader) {
                         Ok(p) => program = p,
                         Err(e) => println!("Error: {}", e),
                     }
