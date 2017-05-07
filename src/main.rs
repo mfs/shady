@@ -8,7 +8,11 @@ use glium::backend::Facade;
 use glium::glutin::{Event, VirtualKeyCode, ElementState};
 
 // todo
-// add time as uniform
+// add following
+// uniform vec3      iResolution;           // viewport resolution (in pixels)
+// uniform float     iGlobalTime;           // shader playback time (in seconds)
+// uniform float     iTimeDelta;            // render time (in seconds)
+// uniform int       iFrame;                // shader playback frame
 
 fn load_shader(filename: &str) -> String {
     let mut f = File::open(filename).unwrap();
@@ -63,8 +67,14 @@ fn main() {
 
     loop {
         let mut target = display.draw();
+        let (width, height) = target.get_dimensions();
+
+        let uniforms = uniform! {
+            dimensions: [width, height], // uvec2
+        };
+
         target.clear_color(0.0, 0.0, 0.0, 1.0);
-        target.draw(&vertex_buffer, &indices, &program, &glium::uniforms::EmptyUniforms,
+        target.draw(&vertex_buffer, &indices, &program, &uniforms,
                     &Default::default()).unwrap();
         target.finish().unwrap();
 
