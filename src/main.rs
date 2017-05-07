@@ -1,6 +1,8 @@
 #[macro_use]
 extern crate glium;
 
+mod shaders;
+
 use std::io::prelude::*;
 use std::fs::File;
 
@@ -25,19 +27,9 @@ fn load_shader(filename: &str) -> String {
 fn compile_shaders(display: &Facade, filename: &str) ->
     Result<glium::Program, glium::ProgramCreationError>  {
 
-    let vertex_shader_src = r#"
-        #version 140
-
-        in vec2 position;
-
-        void main() {
-            gl_Position = vec4(position, 0.0, 1.0);
-        }
-    "#;
-
     let fragment_shader_src = load_shader(filename);
 
-    let program = glium::Program::from_source(display, vertex_shader_src,
+    let program = glium::Program::from_source(display, shaders::VERTEX_SHADER_SRC,
                                               &fragment_shader_src, None);
     program
 }
