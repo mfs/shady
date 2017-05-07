@@ -67,11 +67,14 @@ fn main() {
 
     let mut program = compile_shaders(&display, fragment_shader).unwrap();
 
+    let mut frame: i32 = 0;
+
     loop {
         let mut target = display.draw();
         let (width, height) = target.get_dimensions();
 
         let uniforms = uniform! {
+            iFrame: frame, // int
             iResolution: [width, height], // uvec2
         };
 
@@ -93,5 +96,6 @@ fn main() {
                 _ => ()
             }
         }
+        frame += 1;
     }
 }
