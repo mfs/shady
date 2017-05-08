@@ -1,5 +1,6 @@
 #[macro_use]
 extern crate glium;
+extern crate time;
 
 mod shaders;
 
@@ -68,15 +69,23 @@ fn main() {
     let mut program = compile_shaders(&display, fragment_shader).unwrap();
 
     let mut frame: i32 = 0;
+    let start_time: f64 = time::precise_time_s();
+    let mut last_time: f64 = start_time;
 
     loop {
         let mut target = display.draw();
         let (width, height) = target.get_dimensions();
 
+        let current_time = time::precise_time_s();
+
         let uniforms = uniform! {
             iFrame: frame, // int
             iResolution: [width, height], // uvec2
+            iGlobalTime: (current_time - start_time) as f32, // float
+            iTimeDelta: (current_time - last_time) as f32, // float
         };
+
+        last_time = current_time;
 
         target.clear_color(0.0, 0.0, 0.0, 1.0);
         target.draw(&vertex_buffer, &indices, &program, &uniforms,
