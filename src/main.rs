@@ -10,13 +10,6 @@ use std::fs::File;
 use glium::backend::Facade;
 use glium::glutin::{Event, VirtualKeyCode, ElementState};
 
-// todo
-// add following
-// uniform vec3      iResolution;           // viewport resolution (in pixels)
-// uniform float     iGlobalTime;           // shader playback time (in seconds)
-// uniform float     iTimeDelta;            // render time (in seconds)
-// uniform int       iFrame;                // shader playback frame
-
 fn load_shader(filename: &str) -> String {
     let mut f = File::open(filename).unwrap();
     let mut shader = String::new();
