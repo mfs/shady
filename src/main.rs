@@ -8,7 +8,7 @@ use std::io::prelude::*;
 use std::fs::File;
 
 use glium::backend::Facade;
-use glium::glutin::{Event, VirtualKeyCode, ElementState};
+use glium::glutin::{Event, VirtualKeyCode, ElementState, MouseButton};
 
 fn load_shader(filename: &str) -> String {
     let mut f = File::open(filename).unwrap();
@@ -65,6 +65,11 @@ fn main() {
     let start_time: f64 = time::precise_time_s();
     let mut last_time: f64 = start_time;
 
+    // mouse pixel coords. xy: current (if MLB down), zw: click
+    let mut mouse: [f32; 4] = [0.0, 0.0, 0.0, 0.0];
+    let mut mouse_tracking = false;
+    let mut mouse_coord = [0, 0];
+
     loop {
         let mut target = display.draw();
         let (width, height) = target.get_dimensions();
@@ -73,6 +78,7 @@ fn main() {
 
         let uniforms = uniform! {
             iFrame: frame, // int
+            iMouse: mouse, // vec4
             iResolution: [width, height], // uvec2
             iGlobalTime: (current_time - start_time) as f32, // float
             iTimeDelta: (current_time - last_time) as f32, // float
@@ -93,6 +99,22 @@ fn main() {
                     match compile_shaders(&display, fragment_shader) {
                         Ok(p) => program = p,
                         Err(e) => println!("Error: {}", e),
+                    }
+                },
+                Event::MouseInput(ElementState::Pressed, MouseButton::Left) => {
+                    mouse_tracking = true;
+                    mouse[2] = mouse_coord[0] as f32;
+                    mouse[3] = mouse_coord[1] as f32;
+                },
+                Event::MouseInput(ElementState::Released, MouseButton::Left) => {
+                    mouse_tracking = false;
+                },
+                Event::MouseMoved(x, y) => {
+                    println!("mouse = {:?}", mouse);
+                    mouse_coord = [x, y];
+                    if mouse_tracking {
+                        mouse[0] = x as f32;
+                        mouse[1] = y as f32;
                     }
                 },
                 _ => ()
