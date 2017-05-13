@@ -110,7 +110,6 @@ fn main() {
                     mouse_tracking = false;
                 },
                 Event::MouseMoved(x, y) => {
-                    println!("mouse = {:?}", mouse);
                     mouse_coord = [x, y];
                     if mouse_tracking {
                         mouse[0] = x as f32;
