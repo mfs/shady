@@ -1,16 +1,21 @@
 #[macro_use]
 extern crate glium;
 extern crate time;
+extern crate notify;
 
 mod shaders;
 
 use std::io::prelude::*;
 use std::fs::File;
+use std::path::Path;
+use notify::{Watcher, RecursiveMode, watcher, DebouncedEvent};
+use std::sync::mpsc::channel;
+use std::time::Duration;
 
 use glium::backend::Facade;
 use glium::glutin::{Event, VirtualKeyCode, ElementState, MouseButton};
 
-fn load_shader(filename: &str) -> String {
+fn load_shader(filename: &Path) -> String {
     let mut f = File::open(filename).unwrap();
     let mut shader = String::new();
     f.read_to_string(&mut shader).unwrap();
@@ -18,7 +23,7 @@ fn load_shader(filename: &str) -> String {
     shader
 }
 
-fn compile_shaders(display: &Facade, filename: &str) ->
+fn compile_shaders(display: &Facade, filename: &Path) ->
     Result<glium::Program, glium::ProgramCreationError>  {
 
     let fragment_shader_src = load_shader(filename);
@@ -36,7 +41,20 @@ fn main() {
         std::process::exit(1);
     }
 
-    let ref fragment_shader = args[1];
+    let file_path = match Path::new(&args[1]).canonicalize() {
+        Ok(f)  => f,
+        Err(e) => { println!("shady: error: {}", e); std::process::exit(1); },
+    };
+
+    let _file_path_str = match file_path.to_str() {
+        Some(x) => x,
+        None    => { println!("shady: error: unicode error in file name"); std::process::exit(1); },
+    };
+
+    let directory = match file_path.parent() {
+        Some(x) => x,
+        None    => { println!("shady: error: no parent directory"); std::process::exit(1)},
+    };
 
     use glium::{DisplayBuild, Surface};
     let display = glium::glutin::WindowBuilder::new().build_glium().unwrap();
@@ -59,7 +77,11 @@ fn main() {
     let vertex_buffer = glium::VertexBuffer::new(&display, &shape).unwrap();
     let indices = glium::index::NoIndices(glium::index::PrimitiveType::TriangleStrip);
 
-    let mut program = compile_shaders(&display, fragment_shader).unwrap();
+    let mut program = compile_shaders(&display, &file_path).unwrap();
+
+    let (tx, rx) = channel();
+    let mut watcher = watcher(tx, Duration::from_secs(2)).unwrap();
+    watcher.watch(directory, RecursiveMode::NonRecursive).unwrap();
 
     let mut frame: i32 = 0;
     let start_time: f64 = time::precise_time_s();
@@ -71,6 +93,14 @@ fn main() {
     let mut mouse_coord = [0, 0];
 
     loop {
+
+        match rx.try_recv() {
+            Ok(DebouncedEvent::Create(_)) => println!("-- change --"),
+            Ok(DebouncedEvent::Write(_)) => println!("-- change --"),
+            Ok(_)  => {},
+            Err(_) => {},
+        }
+
         let mut target = display.draw();
         let (width, height) = target.get_dimensions();
 
@@ -96,7 +126,7 @@ fn main() {
                 Event::Closed => return,
                 Event::KeyboardInput(ElementState::Pressed, _, Some(VirtualKeyCode::Q)) => return,
                 Event::KeyboardInput(ElementState::Pressed, _, Some(VirtualKeyCode::F5)) => {
-                    match compile_shaders(&display, fragment_shader) {
+                    match compile_shaders(&display, &file_path) {
                         Ok(p) => program = p,
                         Err(e) => println!("Error: {}", e),
                     }
