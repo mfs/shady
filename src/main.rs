@@ -33,6 +33,13 @@ fn compile_shaders(display: &Facade, filename: &Path) ->
     program
 }
 
+fn safe_compile_shaders(program: &mut glium::Program, display: &Facade, filename: &Path) {
+    match compile_shaders(display, filename) {
+        Ok(p) => *program = p,
+        Err(e) => println!("shady: error: {}", e),
+    }
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().collect();
 
@@ -44,11 +51,6 @@ fn main() {
     let file_path = match Path::new(&args[1]).canonicalize() {
         Ok(f)  => f,
         Err(e) => { println!("shady: error: {}", e); std::process::exit(1); },
-    };
-
-    let _file_path_str = match file_path.to_str() {
-        Some(x) => x,
-        None    => { println!("shady: error: unicode error in file name"); std::process::exit(1); },
     };
 
     let directory = match file_path.parent() {
@@ -80,7 +82,7 @@ fn main() {
     let mut program = compile_shaders(&display, &file_path).unwrap();
 
     let (tx, rx) = channel();
-    let mut watcher = watcher(tx, Duration::from_secs(2)).unwrap();
+    let mut watcher = watcher(tx, Duration::from_millis(100)).unwrap();
     watcher.watch(directory, RecursiveMode::NonRecursive).unwrap();
 
     let mut frame: i32 = 0;
@@ -95,8 +97,11 @@ fn main() {
     loop {
 
         match rx.try_recv() {
-            Ok(DebouncedEvent::Create(_)) => println!("-- change --"),
-            Ok(DebouncedEvent::Write(_)) => println!("-- change --"),
+            Ok(DebouncedEvent::Create(x)) | Ok(DebouncedEvent::Write(x)) => {
+                if x == file_path {
+                    safe_compile_shaders(&mut program, &display, &file_path);
+                }
+            },
             Ok(_)  => {},
             Err(_) => {},
         }
@@ -126,10 +131,7 @@ fn main() {
                 Event::Closed => return,
                 Event::KeyboardInput(ElementState::Pressed, _, Some(VirtualKeyCode::Q)) => return,
                 Event::KeyboardInput(ElementState::Pressed, _, Some(VirtualKeyCode::F5)) => {
-                    match compile_shaders(&display, &file_path) {
-                        Ok(p) => program = p,
-                        Err(e) => println!("Error: {}", e),
-                    }
+                    safe_compile_shaders(&mut program, &display, &file_path);
                 },
                 Event::MouseInput(ElementState::Pressed, MouseButton::Left) => {
                     mouse_tracking = true;
