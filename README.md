@@ -35,5 +35,5 @@ uniforms are currently available. The GLSL type is in brackets.
 - [ ] Add some textures.
 - [ ] Improve formatting of shader compiler errors.
 - [ ] Replace `time` crate with `chrono`
-- [ ] Supply default shader for when invalid shader is passed in.
+- [x] Supply default shader for when invalid shader is passed in.
 - [ ] Tidy up code.

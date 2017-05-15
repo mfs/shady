@@ -40,6 +40,21 @@ fn safe_compile_shaders(program: &mut glium::Program, display: &Facade, filename
     }
 }
 
+fn init_compile_shaders(display: &Facade, filename: &Path) -> glium::Program {
+    match compile_shaders(display, filename) {
+        Ok(p)  => return p,
+        Err(e) => println!("shady: error: {}", e),
+    }
+
+    let program = glium::Program::from_source(display, shaders::VERTEX_SHADER_SRC,
+                                              shaders::DEFAULT_FRAGMENT_SHADER_SRC, None);
+
+    match program {
+        Ok(p)  => return p,
+        Err(e) => { println!("shady: error: {}", e); std::process::exit(1); },
+    }
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().collect();
 
@@ -79,7 +94,7 @@ fn main() {
     let vertex_buffer = glium::VertexBuffer::new(&display, &shape).unwrap();
     let indices = glium::index::NoIndices(glium::index::PrimitiveType::TriangleStrip);
 
-    let mut program = compile_shaders(&display, &file_path).unwrap();
+    let mut program = init_compile_shaders(&display, &file_path);
 
     let (tx, rx) = channel();
     let mut watcher = watcher(tx, Duration::from_millis(100)).unwrap();
