@@ -32,6 +32,7 @@ uniforms are currently available. The GLSL type is in brackets.
 
 - [x] Reload fragment shader with F5.
 - [x] Reloads fragment shader on file change. Uses notify crate.
+- [ ] Allow multiple shader files.
 - [ ] Add some textures.
 - [ ] Improve formatting of shader compiler errors.
 - [ ] Replace `time` crate with `chrono`
