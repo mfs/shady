@@ -42,7 +42,7 @@ void main()
 
     vec3 r = normalize(vec3(uv, 1.0));
 
-    // camera 3 units back along z
+    // camera 4 units back along z
     vec3 o = vec3(0.0, 0.0, -4.0);
 
     float t = trace(o, r);
