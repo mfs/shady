@@ -1,19 +1,20 @@
 #[macro_use]
 extern crate glium;
-extern crate time;
 extern crate notify;
+extern crate time;
 
 mod shaders;
 
-use std::io::prelude::*;
+use notify::{watcher, DebouncedEvent, RecursiveMode, Watcher};
 use std::fs::File;
+use std::io::prelude::*;
 use std::path::Path;
-use notify::{Watcher, RecursiveMode, watcher, DebouncedEvent};
 use std::sync::mpsc::channel;
 use std::time::Duration;
 
 use glium::backend::Facade;
-use glium::glutin::{Event, VirtualKeyCode, ElementState, MouseButton};
+use glium::glutin::event::{ElementState, Event, MouseButton};
+use glium::Surface;
 
 fn load_shader(filename: &Path) -> String {
     let mut f = File::open(filename).unwrap();
@@ -23,35 +24,47 @@ fn load_shader(filename: &Path) -> String {
     shader
 }
 
-fn compile_shaders(display: &Facade, filename: &Path) ->
-    Result<glium::Program, glium::ProgramCreationError>  {
-
+fn compile_shaders(
+    display: &dyn Facade,
+    filename: &Path,
+) -> Result<glium::Program, glium::ProgramCreationError> {
     let fragment_shader_src = load_shader(filename);
 
-    let program = glium::Program::from_source(display, shaders::VERTEX_SHADER_SRC,
-                                              &fragment_shader_src, None);
+    let program = glium::Program::from_source(
+        display,
+        shaders::VERTEX_SHADER_SRC,
+        &fragment_shader_src,
+        None,
+    );
     program
 }
 
-fn safe_compile_shaders(program: &mut glium::Program, display: &Facade, filename: &Path) {
+fn safe_compile_shaders(program: &mut glium::Program, display: &dyn Facade, filename: &Path) {
     match compile_shaders(display, filename) {
         Ok(p) => *program = p,
         Err(e) => println!("shady: error: {}", e),
     }
 }
 
-fn init_compile_shaders(display: &Facade, filename: &Path) -> glium::Program {
+fn init_compile_shaders(display: &dyn Facade, filename: &Path) -> glium::Program {
     match compile_shaders(display, filename) {
-        Ok(p)  => return p,
+        Ok(p) => return p,
         Err(e) => println!("shady: error: {}", e),
     }
 
-    let program = glium::Program::from_source(display, shaders::VERTEX_SHADER_SRC,
-                                              shaders::DEFAULT_FRAGMENT_SHADER_SRC, None);
+    let program = glium::Program::from_source(
+        display,
+        shaders::VERTEX_SHADER_SRC,
+        shaders::DEFAULT_FRAGMENT_SHADER_SRC,
+        None,
+    );
 
     match program {
-        Ok(p)  => return p,
-        Err(e) => { println!("shady: error: {}", e); std::process::exit(1); },
+        Ok(p) => return p,
+        Err(e) => {
+            println!("shady: error: {}", e);
+            std::process::exit(1);
+        }
     }
 }
 
@@ -64,17 +77,20 @@ fn main() {
     }
 
     let file_path = match Path::new(&args[1]).canonicalize() {
-        Ok(f)  => f,
-        Err(e) => { println!("shady: error: {}", e); std::process::exit(1); },
+        Ok(f) => f,
+        Err(e) => {
+            println!("shady: error: {}", e);
+            std::process::exit(1);
+        }
     };
 
     let directory = match file_path.parent() {
         Some(x) => x,
-        None    => { println!("shady: error: no parent directory"); std::process::exit(1)},
+        None => {
+            println!("shady: error: no parent directory");
+            std::process::exit(1)
+        }
     };
-
-    use glium::{DisplayBuild, Surface};
-    let display = glium::glutin::WindowBuilder::new().build_glium().unwrap();
 
     #[derive(Copy, Clone)]
     struct Vertex {
@@ -83,13 +99,27 @@ fn main() {
 
     implement_vertex!(Vertex, position);
 
-    let vertex1 = Vertex { position: [-1.0,  1.0] }; // NW
-    let vertex2 = Vertex { position: [-1.0, -1.0] }; // SW
+    let vertex1 = Vertex {
+        position: [-1.0, 1.0],
+    }; // NW
+    let vertex2 = Vertex {
+        position: [-1.0, -1.0],
+    }; // SW
 
-    let vertex3 = Vertex { position: [ 1.0,  1.0] }; // NE
-    let vertex4 = Vertex { position: [ 1.0, -1.0] }; // SE
+    let vertex3 = Vertex {
+        position: [1.0, 1.0],
+    }; // NE
+    let vertex4 = Vertex {
+        position: [1.0, -1.0],
+    }; // SE
 
     let shape = vec![vertex1, vertex2, vertex3, vertex4];
+
+    let wb = glium::glutin::window::WindowBuilder::new();
+    let event_loop = glium::glutin::event_loop::EventLoop::new();
+    let cb = glium::glutin::ContextBuilder::new();
+
+    let display = glium::Display::new(wb, cb, &event_loop).unwrap();
 
     let vertex_buffer = glium::VertexBuffer::new(&display, &shape).unwrap();
     let indices = glium::index::NoIndices(glium::index::PrimitiveType::TriangleStrip);
@@ -98,10 +128,14 @@ fn main() {
 
     let (tx, rx) = channel();
     let mut watcher = watcher(tx, Duration::from_millis(100)).unwrap();
-    watcher.watch(directory, RecursiveMode::NonRecursive).unwrap();
+    watcher
+        .watch(directory, RecursiveMode::NonRecursive)
+        .unwrap();
 
     let mut frame: i32 = 0;
-    let start_time: f64 = time::precise_time_s();
+    let start_time: f64 = (time::OffsetDateTime::now_utc() - time::OffsetDateTime::unix_epoch())
+        .as_seconds_f64()
+        * 1000.0;
     let mut last_time: f64 = start_time;
 
     // mouse pixel coords. xy: current (if MLB down), zw: click
@@ -109,22 +143,23 @@ fn main() {
     let mut mouse_tracking = false;
     let mut mouse_coord = [0, 0];
 
-    loop {
-
+    event_loop.run(move |ev, _, cf| {
         match rx.try_recv() {
             Ok(DebouncedEvent::Create(x)) | Ok(DebouncedEvent::Write(x)) => {
                 if x == file_path {
                     safe_compile_shaders(&mut program, &display, &file_path);
                 }
-            },
-            Ok(_)  => {},
-            Err(_) => {},
+            }
+            Ok(_) => {}
+            Err(_) => {}
         }
 
         let mut target = display.draw();
         let (width, height) = target.get_dimensions();
 
-        let current_time = time::precise_time_s();
+        let current_time: f64 = (time::OffsetDateTime::now_utc() - time::OffsetDateTime::unix_epoch())
+            .as_seconds_f64()
+            * 1000.0;
 
         let uniforms = uniform! {
             iFrame: frame, // int
@@ -137,35 +172,53 @@ fn main() {
         last_time = current_time;
 
         target.clear_color(0.0, 0.0, 0.0, 1.0);
-        target.draw(&vertex_buffer, &indices, &program, &uniforms,
-                    &Default::default()).unwrap();
+        target
+            .draw(
+                &vertex_buffer,
+                &indices,
+                &program,
+                &uniforms,
+                &Default::default(),
+            )
+            .unwrap();
         target.finish().unwrap();
 
-        for ev in display.poll_events() {
-            match ev {
-                Event::Closed => return,
-                Event::KeyboardInput(ElementState::Pressed, _, Some(VirtualKeyCode::Q)) => return,
-                Event::KeyboardInput(ElementState::Pressed, _, Some(VirtualKeyCode::F5)) => {
-                    safe_compile_shaders(&mut program, &display, &file_path);
-                },
-                Event::MouseInput(ElementState::Pressed, MouseButton::Left) => {
+        use glium::glutin::event::WindowEvent;
+        match ev {
+            Event::WindowEvent { event, .. } => match event {
+                WindowEvent::CloseRequested | WindowEvent::ReceivedCharacter('q') => {
+                    *cf = glium::glutin::event_loop::ControlFlow::Exit
+                }
+                WindowEvent::ReceivedCharacter('r') => {
+                    safe_compile_shaders(&mut program, &display, &file_path)
+                }
+                WindowEvent::MouseInput {
+                    state: ElementState::Pressed,
+                    button: MouseButton::Left,
+                    ..
+                } => {
                     mouse_tracking = true;
                     mouse[2] = mouse_coord[0] as f32;
                     mouse[3] = mouse_coord[1] as f32;
-                },
-                Event::MouseInput(ElementState::Released, MouseButton::Left) => {
+                }
+                WindowEvent::MouseInput {
+                    state: ElementState::Released,
+                    button: MouseButton::Left,
+                    ..
+                } => {
                     mouse_tracking = false;
-                },
-                Event::MouseMoved(x, y) => {
-                    mouse_coord = [x, y];
+                }
+                WindowEvent::CursorMoved { position, .. } => {
+                    mouse_coord = [position.x as i32, position.y as i32];
                     if mouse_tracking {
-                        mouse[0] = x as f32;
-                        mouse[1] = y as f32;
+                        mouse[0] = position.x as f32;
+                        mouse[1] = position.y as f32;
                     }
-                },
-                _ => ()
-            }
+                }
+                _ => {}
+            },
+            _ => (),
         }
         frame += 1;
-    }
+    });
 }
