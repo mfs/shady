@@ -117,7 +117,9 @@ fn main() {
 
     let wb = glium::glutin::window::WindowBuilder::new();
     let event_loop = glium::glutin::event_loop::EventLoop::new();
-    let cb = glium::glutin::ContextBuilder::new();
+    let cb = glium::glutin::ContextBuilder::new()
+        .with_vsync(true)
+        .with_double_buffer(Some(true));
 
     let display = glium::Display::new(wb, cb, &event_loop).unwrap();
 
@@ -144,6 +146,7 @@ fn main() {
     let mut mouse_coord = [0, 0];
 
     event_loop.run(move |ev, _, cf| {
+        display.gl_window().window().request_redraw();
         match rx.try_recv() {
             Ok(DebouncedEvent::Create(x)) | Ok(DebouncedEvent::Write(x)) => {
                 if x == file_path {
@@ -153,35 +156,6 @@ fn main() {
             Ok(_) => {}
             Err(_) => {}
         }
-
-        let mut target = display.draw();
-        let (width, height) = target.get_dimensions();
-
-        let current_time: f64 = (time::OffsetDateTime::now_utc() - time::OffsetDateTime::unix_epoch())
-            .as_seconds_f64()
-            * 1000.0;
-
-        let uniforms = uniform! {
-            iFrame: frame, // int
-            iMouse: mouse, // vec4
-            iResolution: [width, height], // uvec2
-            iGlobalTime: (current_time - start_time) as f32, // float
-            iTimeDelta: (current_time - last_time) as f32, // float
-        };
-
-        last_time = current_time;
-
-        target.clear_color(0.0, 0.0, 0.0, 1.0);
-        target
-            .draw(
-                &vertex_buffer,
-                &indices,
-                &program,
-                &uniforms,
-                &Default::default(),
-            )
-            .unwrap();
-        target.finish().unwrap();
 
         use glium::glutin::event::WindowEvent;
         match ev {
@@ -217,8 +191,42 @@ fn main() {
                 }
                 _ => {}
             },
+            Event::RedrawRequested(_) => {
+                let current_time: f64 = (time::OffsetDateTime::now_utc()
+                    - time::OffsetDateTime::unix_epoch())
+                .as_seconds_f64()
+                    * 1000.0;
+                let elapsed_time = (current_time - start_time) as f32;
+                let delta_time = (current_time - last_time) as f32;
+                last_time = current_time;
+
+                let mut target = display.draw();
+                let (width, height) = target.get_dimensions();
+
+                let uniforms = uniform! {
+                    iFrame: frame, // int
+                    iMouse: mouse, // vec4
+                    iResolution: [width, height], // uvec2
+                    iGlobalTime: elapsed_time, // float
+                    iTimeDelta: delta_time, // float
+                };
+
+                last_time = current_time;
+
+                target.clear_color(0.0, 0.0, 0.0, 1.0);
+                target
+                    .draw(
+                        &vertex_buffer,
+                        &indices,
+                        &program,
+                        &uniforms,
+                        &Default::default(),
+                    )
+                    .unwrap();
+                target.finish().unwrap();
+                frame += 1;
+            }
             _ => (),
         }
-        frame += 1;
     });
 }
