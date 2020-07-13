@@ -30,7 +30,7 @@ uniforms are currently available. The GLSL type is in brackets.
 
 ## Features - TODO
 
-- [x] Reload fragment shader with F5.
+- [x] Reload fragment shader with F5 or 'R'.
 - [x] Reloads fragment shader on file change. Uses notify crate.
 - [ ] Allow multiple shader files.
 - [ ] Add some textures.

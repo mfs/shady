@@ -13,7 +13,7 @@ use std::sync::mpsc::channel;
 use std::time::Duration;
 
 use glium::backend::Facade;
-use glium::glutin::event::{ElementState, Event, MouseButton};
+use glium::glutin::event::{ElementState, Event, MouseButton, VirtualKeyCode};
 use glium::Surface;
 
 fn load_shader(filename: &Path) -> String {
@@ -165,6 +165,11 @@ fn main() {
                 }
                 WindowEvent::ReceivedCharacter('r') => {
                     safe_compile_shaders(&mut program, &display, &file_path)
+                }
+                WindowEvent::KeyboardInput { input, .. } => {
+                    if input.virtual_keycode == Some(VirtualKeyCode::F5) && input.state == ElementState::Pressed {
+                        safe_compile_shaders(&mut program, &display, &file_path)
+                    }
                 }
                 WindowEvent::MouseInput {
                     state: ElementState::Pressed,
