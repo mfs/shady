@@ -1,4 +1,3 @@
-
 pub const DEFAULT_FRAGMENT_SHADER_SRC: &'static str = r#"
     #version 140
 

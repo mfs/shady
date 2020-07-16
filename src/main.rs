@@ -167,7 +167,9 @@ fn main() {
                     safe_compile_shaders(&mut program, &display, &file_path)
                 }
                 WindowEvent::KeyboardInput { input, .. } => {
-                    if input.virtual_keycode == Some(VirtualKeyCode::F5) && input.state == ElementState::Pressed {
+                    if input.virtual_keycode == Some(VirtualKeyCode::F5)
+                        && input.state == ElementState::Pressed
+                    {
                         safe_compile_shaders(&mut program, &display, &file_path)
                     }
                 }
